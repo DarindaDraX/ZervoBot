@@ -30,8 +30,8 @@ def login():
         "platform": "0"
     }
     data = {
-        "email": "rushhours900@gmail.com",
-        "password": "noxtox@69",
+        "email": os.environ.get('email'),
+        "password": os.environ.get('password'),
     }
     header['content-type'] = "application/x-www-form-urlencoded;charset=utf-8"
     response = requests.post(
