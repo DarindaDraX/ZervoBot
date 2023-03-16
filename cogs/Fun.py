@@ -130,6 +130,8 @@ class Fun(commands.Cog):
     async def on_message(self, message):
         global link
         global count
+        if message.content.lower() == "hello":
+            await message.reply("hello mf")
         if message.content.lower() == "next":
             count = 1 + count
             messagex = str(link[count])
@@ -144,6 +146,28 @@ class Fun(commands.Cog):
     @commands.slash_command(name="say", description='say somethingg')
     async def _say(self, ctx, message):
         await ctx.respond(message)
+
+    @commands.slash_command(name="activity", description='do activity')
+    async def _activity(self, ctx, user: discord.Member, action: str):
+        links = []
+        url = f"https://www.bing.com/images/search?q={action} anime gif"
+        custom_user_agent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
+
+        res = requests.get(url, headers={
+            "User-Agent": custom_user_agent,
+        })
+        soup = BeautifulSoup(res.content, 'lxml')
+        for a in soup.find_all("a", {"class": "iusc"}):
+            m = json.loads(a["m"])
+            murl = m["murl"]
+            links.append(murl)
+        url = random.choice(links)
+        if links:
+            await ctx.respond(
+                f'{ctx.author.mention} {action} to {user.mention} /n {url}',
+                allowed_mentions=discord.AllowedMentions(replied_user=False))
+        else:
+            await ctx.respond(f"[{action} ] may contain banned words")
 
 
 def setup(bot):
