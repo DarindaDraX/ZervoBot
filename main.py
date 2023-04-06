@@ -230,17 +230,12 @@ async def on_message(message):
         await message.reply(chatbot(message, content)['choices'][0]['text'])
 
 
-# Bot Commands
-
-# Example command
-
 guild = 1033800504121241630
-# Put here the IDs of the servers where you want the bot to run, this can be omitted, but keep in mind that new commands may take up to an hour to be registered (This applies to all slash-type commands, including cogs)
 
 for cog in cogs:
     bot.load_extension(cog)
 keep_alive.keep_alive()
-# Run the bot
+
 try:
     bot.run(os.environ.get('TOKEN'))
 except:
