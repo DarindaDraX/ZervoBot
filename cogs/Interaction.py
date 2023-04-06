@@ -85,6 +85,11 @@ class Interaction(commands.Cog):
 
                 # Also added a blank field '\u200b' is a whitespace character.
             pass
+            help_embed.add_field(
+                name='activity',
+                value=
+                "**zay** - `[keyword] [user]`  keyword - ```baka, bite, blush, bored, cry, cuddle, dance, facepalm, feed, handhold, happy, highfive, hug, kick,kiss, laugh, nod, nom, nope, pat, poke, pout, punch, shoot, shrug, slap, sleep, smile, smug, stare, think, thumbsup, tickle, wave, wink, yeet```"
+            )
         else:
 
             # If the cog was specified
@@ -122,9 +127,10 @@ class Interaction(commands.Cog):
                         f' {command.name} {command.usage if command.usage is not None else ""}`\n\n\n\n'
 
                 help_embed.description = help_text
+
             else:
                 # Notify the user of invalid cog and finish the command
-                await ctx.send(
+                await ctx.respond(
                     'Invalid cog specified.\nUse `help` command to list all cogs.'
                 )
                 return

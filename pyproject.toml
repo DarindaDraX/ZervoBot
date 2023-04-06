@@ -13,6 +13,7 @@ urllib3 = "^1.26.12"
 py-cord = "^2.2.2"
 bs4 = "^0.0.1"
 lxml = "^4.9.2"
+openai = "0.27.2"
 
 
 [tool.poetry.dev-dependencies]
