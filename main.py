@@ -1,16 +1,17 @@
 import discord
-import os
 from discord.ext import commands
-import keep_alive
-import requests
-import json
 import sqlite3
-import openai
-import aiohttp
-import datetime
-import random
 
-zervobot = ""
+import os
+import random
+import subprocess
+import shlex
+import asyncio
+import datetime
+import requests
+import aiohttp
+import openai
+import keep_alive
 
 conn = sqlite3.connect("zervo.db")
 
@@ -41,16 +42,72 @@ db.execute("""
     """)
 conn.commit()
 
-# Bot Configuration
-bot = commands.Bot(command_prefix='?',
-                   activity=discord.Activity(
-                       type=discord.ActivityType.listening,
-                       name='master DraX!'),
-                   intents=discord.Intents.all())
+db.execute("""
+    create table IF NOT EXISTS globalchat(
+    dId INT NOT NULL,
+    gId INT NOT NULL,
+    cId INT NOT NULL,
+    cName TEXT 
+    )
+    """)
+conn.commit()
 
-# Bot Events
-#activity=discord.Game(name='with your daddy')
-cogs = ['cogs.Interaction', 'cogs.Fun', 'cogs.Zervo', 'cogs.Custom']
+colors = {
+    'DEFAULT': 0x000000,
+    'WHITE': 0xFFFFFF,
+    'AQUA': 0x1ABC9C,
+    'GREEN': 0x2ECC71,
+    'BLUE': 0x3498DB,
+    'PURPLE': 0x9B59B6,
+    'LUMINOUS_VIVID_PINK': 0xE91E63,
+    'GOLD': 0xF1C40F,
+    'ORANGE': 0xE67E22,
+    'RED': 0xE74C3C,
+    'GREY': 0x95A5A6,
+    'NAVY': 0x34495E,
+    'DARK_AQUA': 0x11806A,
+    'DARK_GREEN': 0x1F8B4C,
+    'DARK_BLUE': 0x206694,
+    'DARK_PURPLE': 0x71368A,
+    'DARK_VIVID_PINK': 0xAD1457,
+    'DARK_GOLD': 0xC27C0E,
+    'DARK_ORANGE': 0xA84300,
+    'DARK_RED': 0x992D22,
+    'DARK_GREY': 0x979C9F,
+    'DARKER_GREY': 0x7F8C8D,
+    'LIGHT_GREY': 0xBCC0C0,
+    'DARK_NAVY': 0x2C3E50,
+    'BLURPLE': 0x7289DA,
+    'GREYPLE': 0x99AAB5,
+    'DARK_BUT_NOT_BLACK': 0x2C2F33,
+    'NOT_QUITE_BLACK': 0x23272A
+}
+
+
+class MyHelp(commands.HelpCommand):
+
+    async def send_bot_help(self, mapping):
+        if isinstance(mapping, set):
+            mapping = {cog: cog.get_commands() for cog in mapping}
+        channel = self.get_destination()
+        help_embed = discord.Embed(
+            title='Help',
+            description="Use command\n**zay** help\n**/help**",
+            color=colors['DARK_BUT_NOT_BLACK'])
+        help_embed.set_thumbnail(url=bot.user.avatar.url)
+        await channel.send(embed=help_embed)
+
+
+bot = commands.Bot(command_prefix='?',
+                   intents=discord.Intents.all(),
+                   help_command=MyHelp(),
+                   activity=discord.Activity(
+                       type=discord.ActivityType.listening, name='?help'))
+cogs = [
+    'cogs.Interaction', 'cogs.Fun', 'cogs.Zervo', 'cogs.Custom', 'cogs.Zay'
+]
+for cog in cogs:
+    bot.load_extension(cog)
 
 
 @bot.event
@@ -60,8 +117,8 @@ async def on_ready():
     print(f"Bot ID: {bot.user.id}")
     bot.conn = conn
     bot.db = db
-
-    bot.remove_command('help')
+    for guild in bot.guilds:
+        print(guild)
 
 
 @bot.event
@@ -69,222 +126,156 @@ async def on_member_join(member):
     await member.send("Welcome to the server")
 
 
-def chatbot(message, content):
-    openai.api_key = os.environ.get('apikey')
-    username = str(message.author)
-    name = str(username[:-5])
-    response = openai.Completion.create(model="text-davinci-003",
-                                        prompt=f"{name}:{content}",
-                                        temperature=0.9,
-                                        max_tokens=100,
-                                        top_p=1,
-                                        frequency_penalty=0,
-                                        presence_penalty=0.6,
-                                        stop=[" zervobot:", " user:"])
-    print(name)
-    return response
+@bot.command(name="addrole")
+async def add_role(ctx, member: discord.Member):
+    guild = discord.utils.get(bot.guilds, name="Rizzland")
+    target_guild = await bot.fetch_guild(guild.id)
+    if target_guild:
+        role = discord.utils.get(target_guild.roles, id=1085602292981575690)
+        print(role.id)
+        if role:
+            await member.add_roles(role)
+            await ctx.send("Role added successfully!")
+        else:
+            await ctx.send("Role not found in the guild.")
+    else:
+        await ctx.send("Guild not found.")
 
 
-key_to = [
-    'baka', 'bite', 'blush', 'cuddle', 'facepalm', 'feed', 'highfive', 'hug',
-    'kick', 'kiss', 'nod', 'nom', 'nope', 'pat', 'poke', 'pout', 'punch',
-    'shoot', 'shrug', 'slap', 'smile', 'smug', 'stare', 'thumbsup', 'tickle',
-    'wave', 'wink', 'yeet'
-]
-key_with = [
-    'bored', 'cry', 'dance', 'handhold', 'happy', 'laugh', 'sleep', 'think'
-]
+@bot.command(name="checkpermissions")
+async def check_permissions(ctx):
+    # Get the bot's role in the target guild
+    guild = discord.utils.get(bot.guilds, name="Rizzland")
+    if guild:
+        bot_role = guild.get_member(
+            bot.user.id).roles[-1]  # Assumes the bot has only one role
+        permissions = bot_role.permissions
 
-keys = [
-    "airkiss", "angrystare", "bite", "bleh", "blush", "brofist", "celebrate",
-    "cheers", "clap", "confused", "cool", "cry", "cuddle", "dance", "drool",
-    "evillaugh", "facepalm", "handhold", "happy", "headbang", "hug", "kiss",
-    "laugh", "lick", "love", "mad", "nervous", "no", "nom", "nosebleed",
-    "nuzzle", "nyah", "pat", "peek", "pinch", "poke", "pout", "punch", "roll",
-    "run", "sad", "scared", "shrug", "shy", "sigh", "sip", "slap", "sleep",
-    "slowclap", "smack", "smile", "smug", "sneeze", "sorry", "stare", "stop",
-    "surprised", "sweat", "thumbsup", "tickle", "tired", "wave", "wink",
-    "woah", "yawn", "yay", "yes"
-]
-continuous_forms = {
-    'baka': 'baka-ing',
-    'bite': 'biting',
-    'blush': 'blushing',
-    'bored': 'boring',
-    'cry': 'crying',
-    'cuddle': 'cuddling',
-    'dance': 'dancing',
-    'facepalm': 'facepalming',
-    'feed': 'feeding',
-    'handhold': 'handholding',
-    'happy': 'happying',
-    'highfive': 'highfiving',
-    'hug': 'hugging',
-    'kick': 'kicking',
-    'kiss': 'kissing',
-    'laugh': 'laughing',
-    'nod': 'nodding',
-    'nom': 'nomming',
-    'nope': 'nope-ing',
-    'pat': 'patting',
-    'poke': 'poking',
-    'pout': 'pouting',
-    'punch': 'punching',
-    'shoot': 'shooting',
-    'shrug': 'shrugging',
-    'slap': 'slapping',
-    'sleep': 'sleeping',
-    'smile': 'smiling',
-    'smug': 'smugging',
-    'stare': 'staring',
-    'think': 'thinking',
-    'thumbsup': 'thumbs-upping',
-    'tickle': 'tickling',
-    'wave': 'waving',
-    'wink': 'winking',
-    'yeet': 'yeeting'
-}
-
-emojis = {
-    'baka': ['🙄', '😒', '🤪'],
-    'bite': ['🦷', '🍴', '😬'],
-    'blush': ['🥰', '😊', '😳'],
-    'bored': ['😴', '🥱', '😑'],
-    'cry': ['😢', '😭', '😿'],
-    'cuddle': ['🤗', '🫂', '😻'],
-    'dance': ['💃', '🕺', '🎶'],
-    'facepalm': ['🤦‍♀️', '🤦‍♂️', '😖'],
-    'feed': ['🍽️', '🥄', '🐦'],
-    'handhold': ['🤝', '👐', '💞'],
-    'happy': ['😁', '😄', '😊'],
-    'highfive': ['👋', '🤚', '🙌'],
-    'hug': ['🤗', '🫂', '👫'],
-    'kick': ['🦵', '👟', '🤜'],
-    'kiss': ['😘', '💋', '👄'],
-    'laugh': ['😂', '🤣', '😆'],
-    'nod': ['👍', '🙌', '👌'],
-    'nom': ['🍴', '🍔', '😋'],
-    'nope': ['🙅‍♀️', '🙅‍♂️', '👎'],
-    'pat': ['👏', '🐶', '🤗'],
-    'poke': ['👉', '👈', '🙄'],
-    'pout': ['😞', '😔', '😣'],
-    'punch': ['🥊', '🤜', '👊'],
-    'shoot': ['🔫', '💥', '🎯'],
-    'shrug': ['🤷‍♀️', '🤷‍♂️', '🤔'],
-    'slap': ['👋', '🤚', '👋‍♂️'],
-    'sleep': ['😴', '💤', '🌙'],
-    'smile': ['😃', '🙂', '😊'],
-    'smug': ['😏', '😎', '🤨'],
-    'stare': ['👀', '👁️', '😳'],
-    'think': ['🤔', '💭', '🧐'],
-    'thumbsup': ['👍', '👍🏻', '👍🏼', '👍🏽', '👍🏾', '👍🏿'],
-    'tickle': ['🤭', '😆', '🤗'],
-    'wave': ['👋', '👋🏻', '👋🏼', '👋🏽', '👋🏾', '👋🏿'],
-    'wink': ['😉', '😜', '😘'],
-    'yeet': ['🦵']
-}
-
-keywords = []
-keywords.extend(key_to)
-keywords.extend(key_with)
+        # Check specific permissions
+        if permissions.manage_roles:
+            await ctx.send("Bot has 'Manage Roles' permission.")
+        else:
+            await ctx.send("Bot does not have 'Manage Roles' permission.")
+    else:
+        await ctx.send("Guild not found.")
 
 
-@bot.event
-async def on_message(message):
-    if message.content.lower().startswith("zay"):
-        msg = str(message.content)[3:].lower().split()
-        found_member = False
-        if not msg:
-            return
-        cmd = msg[0]
-        if cmd in keys:
-            if len(msg) >= 2:
-                action = msg[0]
-                user = msg[1]
-                if user.startswith("<@"):
-                    dec = int(user.replace("<@", "").replace('>', ""))
-                    duser = bot.get_user(dec)
-                    user = duser.name
-                    pass
-                elif user == 'random':
-                    user = random.choice(
-                        [name.name for name in message.guild.members])
-                else:
-                    for name in message.guild.members:
-                        if name.name.lower().startswith(user) or \
-                        (name.nick is not None and name.nick.lower().startswith(user)):
-                            user = name.name
-                            found_member = True
-                            break
-                        else:
-                            continue
-                        break
-                    if not found_member:
-                        await message.reply(
-                            f"No member found with name starting with {msg[1]}"
-                        )
-                        return
-            elif len(msg) == 1:
-                user = None
-                action = msg[0]
-            #"https://nekos.best/api/v2/{action}"
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                        f"https://api.otakugifs.xyz/gif?reaction={action}"
-                ) as resp:
-                    data = await resp.json()
-                    emoji = ' '  #random.choice(emojis[action])
-                    if action in [
-                            "kiss", "hug", "cuddle", "nuzzle", "pat", "smack",
-                            "handhold"
-                    ]:
-                        action_ = action + 'ed'
-                        to_or_with = 'to'
-                    elif action in ["bite", "pinch", "poke", "punch"]:
-                        action_ = action + 'ed'
-                        to_or_with = 'on'
-                    elif action in ["wave", "headbang", "nod", "shake"]:
-                        action_ = action + 'ed'
-                        to_or_with = 'at'
-                    elif action in ["sleep", "snore"]:
-                        action_ = action + 'ing'
-                        to_or_with = 'with'
-                    elif action in [
-                            "sad",
-                    ]:
-                        to_or_with = 'with'
-                        action_ = "is sad"
-                    else:
-                        action_ = action + 'ing'
-                        to_or_with = 'to'
-                    if user == None:
-                        embed = discord.Embed(
-                            description=
-                            f'{emoji} **{message.author.name}** {action_}',
-                            color=discord.Colour.blue())
-                    else:
-                        embed = discord.Embed(
-                            description=
-                            f'{emoji} **{message.author.name}** {action_} {to_or_with} **{user}**',
-                            color=discord.Colour.blue())
-                    embed.set_image(url=data["url"])
-                    embed.timestamp = datetime.datetime.utcnow()
-                    embed.set_footer(text=action)
-                    await message.reply(embed=embed)
-    if message.channel.id == 1085978090011902084:
-        if message.author.id != bot.user.id:
-            content = message.content
-            await message.reply(
-                chatbot(message, content)['choices'][0]['text'])
-    elif message.content.lower().startswith('bot'):
-        content = message.content[3:]
-        await message.reply(chatbot(message, content)['choices'][0]['text'])
+@bot.slash_command(name="sendmessage")
+async def send_message(ctx, guild_name: str, channel_name: str, message: str):
+    # Find the target guild by name
+    target_guild = discord.utils.get(bot.guilds, name=guild_name)
+    if target_guild:
+        # Find the target channel in the target guild by name
+        target_channel = discord.utils.get(target_guild.text_channels,
+                                           name=channel_name)
+        if target_channel:
+            # Send the message in the target channel
+            await target_channel.send(message)
+            await ctx.respond("Message sent successfully!")
+        else:
+            await ctx.respond(
+                f"Channel '{channel_name}' not found in the guild '{guild_name}'."
+            )
+    else:
+        await ctx.respond(f"Guild '{guild_name}' not found.")
 
 
-guild = 1033800504121241630
+@bot.command(name="a")
+async def a(ctx, member: discord.Member, role: discord.Role):
+    await ctx.message.delete()
+    print(role)
+    print(type(role))
+    await member.add_roles(role)
 
-for cog in cogs:
-    bot.load_extension(cog)
+
+@bot.command()
+async def py(ctx, *, command: str):
+    if ctx.author.id != 632748789341618207:
+        await ctx.send("only drax can use this")
+        return
+    try:
+        output = subprocess.check_output(['python3', '-c', f'{command}'],
+                                         stderr=subprocess.STDOUT,
+                                         text=True)
+        #output = subprocess.check_output(command + ' 2>&1', shell=True, text=True)
+        embed = discord.Embed(description=output,
+                              color=colors['DARK_BUT_NOT_BLACK'])
+        await ctx.send(embed=embed)
+    except subprocess.CalledProcessError as e:
+        embed = discord.Embed(title="ERROR",
+                              description=f"{e.returncode}\n{e.output}")
+        await ctx.send(embed=embed)
+    except Exception as ex:
+        await ctx.send(f'Error: {ex}')
+
+
+@bot.command()
+async def bash(ctx, *, command: str):
+    if ctx.author.id != 632748789341618207:
+        await ctx.send("only drax can use this")
+        return
+    try:
+        #output = subprocess.check_output(['python3', '-c', f'{command}'],stderr=subprocess.STDOUT,text=True)
+        output = subprocess.check_output(command + ' 2>&1',
+                                         shell=True,
+                                         text=True)
+        embed = discord.Embed(description=output,
+                              color=colors['DARK_BUT_NOT_BLACK'])
+        await ctx.send(embed=embed)
+    except subprocess.CalledProcessError as e:
+        embed = discord.Embed(title="ERROR",
+                              description=f"{e.returncode}\n{e.output}")
+        await ctx.send(embed=embed)
+    except Exception as ex:
+        await ctx.send(f'Error: {ex}')
+
+
+@bot.command()
+async def sh(ctx, *, command: str):
+    if ctx.author.id != 632748789341618207:
+        await ctx.send("only drax can use this")
+        return
+    try:
+        args = shlex.split(command)
+        if args[0] == 'cd':
+            os.chdir(args[1])
+            output = f"Changed directory to: {args[1]}"
+            embed = discord.Embed(description=output)
+            await ctx.send(embed=embed)
+
+        else:
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE)
+            stdout, stderr = await process.communicate()
+            stdout = stdout.decode()
+            stderr = stderr.decode()
+            embed = discord.Embed(description=f"**Output**:\n{stdout}",
+                                  color=colors['DARK_BUT_NOT_BLACK'])
+            embed.set_footer(text=stderr)
+            await ctx.send(embed=embed)
+
+    except Exception as ex:
+        await ctx.send(f'Error: {ex}')
+
+
+@bot.command()
+async def sql(ctx, *, command: str):
+    if ctx.author.id != 632748789341618207:
+        await ctx.send("Only authorized users can use this command.")
+        return
+    try:
+        db.execute(command)
+        result = db.fetchall()
+        conn.commit()
+        embed = discord.Embed(description=result,
+                              color=colors['DARK_BUT_NOT_BLACK'])
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"Error: {e}")
+
+
 keep_alive.keep_alive()
 
 try:

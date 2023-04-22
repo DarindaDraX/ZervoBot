@@ -85,11 +85,6 @@ class Interaction(commands.Cog):
 
                 # Also added a blank field '\u200b' is a whitespace character.
             pass
-            help_embed.add_field(
-                name='activity',
-                value=
-                "**zay** - `[keyword] [user]`  keyword - ```baka, bite, blush, bored, cry, cuddle, dance, facepalm, feed, handhold, happy, highfive, hug, kick,kiss, laugh, nod, nom, nope, pat, poke, pout, punch, shoot, shrug, slap, sleep, smile, smug, stare, think, thumbsup, tickle, wave, wink, yeet```"
-            )
         else:
 
             # If the cog was specified
@@ -116,7 +111,7 @@ class Interaction(commands.Cog):
 
                     # Also add aliases, if there are any
                     if len(command.aliases) > 0:
-                        help_text += f'**Aliases :** `{"`, `".join(command.aliases)}`\n\n\n'
+                        help_text += f'**Aliases :** `{"`, `".join(command.aliases)}`\n'
                     else:
                         # Add a newline character to keep it pretty
                         # That IS the whole purpose of custom help

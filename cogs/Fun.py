@@ -67,10 +67,6 @@ class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="testing")
-    async def testing(ctx, message):
-        await ctx.respond(message)
-
     @commands.slash_command(name="hack", description='Hack someone')
     async def _hack(self, ctx, user: discord.Member):
         msg = await ctx.send(f'hacking {user.name}')
@@ -146,10 +142,11 @@ class Fun(commands.Cog):
         else:
             await ctx.respond(f"[{query} ] may contain banned words")
 
-    @commands.slash_command(name='spam')
-    async def _spam(self, ctx, message: str, count: int):
-        for x in range(1, count):
-            await ctx.respond(message)
+
+# @commands.slash_command(name='spam')
+#async def _spam(self, ctx, message: str, count: int):
+#   for x in range(1, count):
+#      await ctx.respond(message)
 
 
 def setup(bot):
